@@ -65,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let pings = [];
   let pendingImageData = '';
   const paPasscode = 'shadpa2026';
+  let suspendedReporters = [];
 
   const defaultItems = [
     {
@@ -141,6 +142,17 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  function loadSuspensions() {
+    const saved = localStorage.getItem('shad_lf_suspensions');
+    if (saved) {
+      suspendedReporters = JSON.parse(saved);
+    }
+  }
+
+  function saveSuspensions() {
+    localStorage.setItem('shad_lf_suspensions', JSON.stringify(suspendedReporters));
+  }
+
   function addSpamGuard() {
     const history = JSON.parse(sessionStorage.getItem('shad_lf_submission_history') || '[]');
     const now = Date.now();
@@ -155,6 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedItems = localStorage.getItem('shad_lf_items');
     const savedWatchers = localStorage.getItem('shad_lf_watchers');
     const savedPings = localStorage.getItem('shad_lf_pings');
+
+    loadSuspensions();
 
     if (savedItems) items = JSON.parse(savedItems).map(normalizeItem);
     else {
@@ -194,8 +208,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const cntWatchers = document.getElementById('cnt-watchers');
 
   function updateStats() {
-    const activeCount = items.filter(i => i.reviewStatus !== 'pending' && i.status === 'active').length;
-    const resolvedCount = items.filter(i => i.reviewStatus !== 'pending' && i.status === 'resolved').length;
+    const activeCount = items.filter(i => i.reviewStatus !== 'pending' && i.reviewStatus !== 'spam' && i.status === 'active').length;
+    const resolvedCount = items.filter(i => i.reviewStatus !== 'pending' && i.reviewStatus !== 'spam' && i.status === 'resolved').length;
     
     if (cntActive) cntActive.textContent = activeCount;
     if (cntResolved) cntResolved.textContent = resolvedCount;
@@ -329,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
     itemsContainer.innerHTML = '';
 
     const filtered = items.filter(item => {
-      if (item.reviewStatus === 'pending') return false;
+      if (item.reviewStatus === 'pending' || item.reviewStatus === 'spam') return false;
       return filterValue === 'all' || item.category === filterValue;
     });
 
@@ -563,28 +577,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderPaReviewList() {
     const reviewList = document.getElementById('pa-review-list');
+    const suspensionsList = document.getElementById('pa-suspensions-list');
     const reviewPanel = document.getElementById('pa-review-panel');
-    if (!reviewList || !reviewPanel) return;
+    if (!reviewList || !reviewPanel || !suspensionsList) return;
 
-    const pendingItems = items.filter(item => item.reviewStatus === 'pending');
-    if (pendingItems.length === 0) {
-      reviewList.innerHTML = '<p style="color: var(--text-muted);">No pending submissions.</p>';
-      return;
-    }
+    const pendingItems = items.filter(item => item.reviewStatus === 'pending' || item.reviewStatus === 'spam');
+    reviewList.innerHTML = pendingItems.length === 0
+      ? '<p style="color: var(--text-muted);">No pending submissions.</p>'
+      : pendingItems.map(item => `
+          <div class="pa-review-item">
+            <h4>${item.name}</h4>
+            <p><strong>Reporter:</strong> ${item.reporter} • <strong>Location:</strong> ${item.location}</p>
+            <p>${item.desc}</p>
+            <div class="pa-review-actions">
+              <button class="btn btn-primary allow-item-btn" data-id="${item.id}">Allow</button>
+              <button class="btn btn-secondary spam-item-btn" data-id="${item.id}">Spam/Troll</button>
+              <button class="btn btn-secondary suspend-reporter-btn" data-id="${item.id}">Suspend Reporter</button>
+            </div>
+          </div>
+        `).join('');
 
-    reviewList.innerHTML = pendingItems.map(item => `
-      <div class="pa-review-item">
-        <h4>${item.name}</h4>
-        <p><strong>Reporter:</strong> ${item.reporter} • <strong>Location:</strong> ${item.location}</p>
-        <p>${item.desc}</p>
-        <div class="pa-review-actions">
-          <button class="btn btn-primary approve-item-btn" data-id="${item.id}">Approve</button>
-          <button class="btn btn-secondary reject-item-btn" data-id="${item.id}">Reject</button>
-        </div>
-      </div>
-    `).join('');
+    suspensionsList.innerHTML = suspendedReporters.length === 0
+      ? '<p style="color: var(--text-muted);">No suspended reporters.</p>'
+      : `<div class="pa-review-item"><p><strong>Suspended reporters:</strong> ${suspendedReporters.join(', ')}</p></div>`;
 
-    reviewList.querySelectorAll('.approve-item-btn').forEach(btn => {
+    reviewList.querySelectorAll('.allow-item-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
         const targetItem = items.find(item => item.id === id);
@@ -595,20 +612,45 @@ document.addEventListener('DOMContentLoaded', () => {
           renderPaReviewList();
           renderFoundItems(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
           updateStats();
-          addPingLog('system', `PA approved item: ${targetItem.name}.`);
+          addPingLog('system', `PA allowed item: ${targetItem.name}.`);
         }
       });
     });
 
-    reviewList.querySelectorAll('.reject-item-btn').forEach(btn => {
+    reviewList.querySelectorAll('.spam-item-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
-        items = items.filter(item => item.id !== id);
-        saveState();
-        renderPaReviewList();
-        renderFoundItems(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
-        updateStats();
-        addPingLog('system', 'PA rejected a suspicious submission.');
+        const targetItem = items.find(item => item.id === id);
+        if (targetItem) {
+          targetItem.reviewStatus = 'spam';
+          targetItem.status = 'inactive';
+          saveState();
+          renderPaReviewList();
+          renderFoundItems(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
+          updateStats();
+          addPingLog('system', `PA marked item as spam/troll: ${targetItem.name}.`);
+        }
+      });
+    });
+
+    reviewList.querySelectorAll('.suspend-reporter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const targetItem = items.find(item => item.id === id);
+        if (targetItem) {
+          const reporter = targetItem.reporter.toLowerCase();
+          if (!suspendedReporters.includes(reporter)) {
+            suspendedReporters.push(reporter);
+            saveSuspensions();
+          }
+          targetItem.reviewStatus = 'spam';
+          targetItem.status = 'inactive';
+          saveState();
+          renderPaReviewList();
+          renderFoundItems(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
+          updateStats();
+          addPingLog('system', `PA suspended reporter ${targetItem.reporter}.`);
+        }
       });
     });
   }
@@ -628,9 +670,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const secret = document.getElementById('ipt-item-secret').value.trim();
       const desc = document.getElementById('ipt-item-desc').value.trim();
       const itemImage = pendingImageData || '';
+      const normalizedReporter = reporter.toLowerCase();
 
       if (!name || !location || !storage || !reporter || !secret || !desc) {
         showToast('Please fill in every field before submitting a report.', '', '');
+        return;
+      }
+
+      if (suspendedReporters.includes(normalizedReporter)) {
+        showToast('This reporter has been suspended from submitting new reports.', '', '');
         return;
       }
 
@@ -693,7 +741,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Log report in console
       addPingLog('system', `Pending review: ${newItem.name} submitted by ${newItem.reporter}.`);
-      showToast('Report received. It is now waiting for PA review before it appears publicly.', '', '');
+      showToast('Report received. It is now waiting for PA review and may be removed if flagged as spam or troll activity.', '', '');
     });
   }
 
