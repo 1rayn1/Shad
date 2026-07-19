@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let watchers = [];
   let pings = [];
   let pendingImageData = '';
+  const paPasscode = 'shadpa2026';
 
   const defaultItems = [
     {
@@ -76,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
       reporter: 'Sarah (Staff)',
       secret: '1234',
       desc: 'White AirPods Pro inside a black silicone case. One side has a small sticker residue.',
+      reviewStatus: 'approved',
       status: 'active',
       date: '2026-07-18T14:30:00Z'
     },
@@ -89,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
       reporter: 'David (Shad)',
       secret: 'david123',
       desc: '32oz wide-mouth HydroFlask. Covered in various laptop stickers including GitHub and Shad logos.',
+      reviewStatus: 'approved',
       status: 'active',
       date: '2026-07-19T09:15:00Z'
     },
@@ -102,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
       reporter: 'Emma (PA)',
       secret: 'gympass',
       desc: 'Size Medium, slightly faded grey. Left sleeve has a small white paint spot.',
+      reviewStatus: 'approved',
       status: 'active',
       date: '2026-07-17T17:45:00Z'
     }
@@ -129,15 +133,32 @@ document.addEventListener('DOMContentLoaded', () => {
     history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
   }
 
+  function normalizeItem(item) {
+    return {
+      ...item,
+      reviewStatus: item.reviewStatus || 'approved',
+      moderationNote: item.moderationNote || ''
+    };
+  }
+
+  function addSpamGuard() {
+    const history = JSON.parse(sessionStorage.getItem('shad_lf_submission_history') || '[]');
+    const now = Date.now();
+    const recent = history.filter(ts => now - ts < 60000);
+    recent.push(now);
+    sessionStorage.setItem('shad_lf_submission_history', JSON.stringify(recent.slice(-5)));
+    return recent.length <= 3;
+  }
+
   // Load and save functions
   function loadState() {
     const savedItems = localStorage.getItem('shad_lf_items');
     const savedWatchers = localStorage.getItem('shad_lf_watchers');
     const savedPings = localStorage.getItem('shad_lf_pings');
 
-    if (savedItems) items = JSON.parse(savedItems);
+    if (savedItems) items = JSON.parse(savedItems).map(normalizeItem);
     else {
-      items = defaultItems;
+      items = defaultItems.map(normalizeItem);
       localStorage.setItem('shad_lf_items', JSON.stringify(items));
     }
 
@@ -173,8 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const cntWatchers = document.getElementById('cnt-watchers');
 
   function updateStats() {
-    const activeCount = items.filter(i => i.status === 'active').length;
-    const resolvedCount = items.filter(i => i.status === 'resolved').length;
+    const activeCount = items.filter(i => i.reviewStatus !== 'pending' && i.status === 'active').length;
+    const resolvedCount = items.filter(i => i.reviewStatus !== 'pending' && i.status === 'resolved').length;
     
     if (cntActive) cntActive.textContent = activeCount;
     if (cntResolved) cntResolved.textContent = resolvedCount;
@@ -308,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
     itemsContainer.innerHTML = '';
 
     const filtered = items.filter(item => {
+      if (item.reviewStatus === 'pending') return false;
       return filterValue === 'all' || item.category === filterValue;
     });
 
@@ -441,12 +463,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Modal Logic ---
   const reportModal = document.getElementById('report-modal');
   const resolveModal = document.getElementById('resolve-modal');
+  const paModal = document.getElementById('pa-modal');
   const itemImageInput = document.getElementById('ipt-item-image');
   
   const triggerReportBtn = document.getElementById('btn-trigger-report');
   const closeReportBtn = document.getElementById('btn-close-report');
   const closeResolveBtn = document.getElementById('btn-close-resolve');
+  const closePaBtn = document.getElementById('btn-close-pa');
   const copyLinkBtn = document.getElementById('btn-copy-link');
+  const paPanelBtn = document.getElementById('btn-open-pa-panel');
 
   function openModal(modal) {
     modal.classList.add('active');
@@ -474,6 +499,14 @@ document.addEventListener('DOMContentLoaded', () => {
         addPingLog('system', 'Share link ready to copy from the address bar.');
       }
     });
+  }
+
+  if (paPanelBtn && paModal) {
+    paPanelBtn.addEventListener('click', () => openModal(paModal));
+  }
+
+  if (closePaBtn && paModal) {
+    closePaBtn.addEventListener('click', () => closeModal(paModal));
   }
 
   if (itemImageInput) {
@@ -509,6 +542,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const errLbl = document.getElementById('lbl-resolve-error');
       if (errLbl) errLbl.style.display = 'none';
     }
+    if (e.target === paModal) {
+      closeModal(paModal);
+    }
   });
 
   function openResolveModal(id, name) {
@@ -523,6 +559,58 @@ document.addEventListener('DOMContentLoaded', () => {
     if (errLbl) errLbl.style.display = 'none';
 
     if (resolveModal) openModal(resolveModal);
+  }
+
+  function renderPaReviewList() {
+    const reviewList = document.getElementById('pa-review-list');
+    const reviewPanel = document.getElementById('pa-review-panel');
+    if (!reviewList || !reviewPanel) return;
+
+    const pendingItems = items.filter(item => item.reviewStatus === 'pending');
+    if (pendingItems.length === 0) {
+      reviewList.innerHTML = '<p style="color: var(--text-muted);">No pending submissions.</p>';
+      return;
+    }
+
+    reviewList.innerHTML = pendingItems.map(item => `
+      <div class="pa-review-item">
+        <h4>${item.name}</h4>
+        <p><strong>Reporter:</strong> ${item.reporter} • <strong>Location:</strong> ${item.location}</p>
+        <p>${item.desc}</p>
+        <div class="pa-review-actions">
+          <button class="btn btn-primary approve-item-btn" data-id="${item.id}">Approve</button>
+          <button class="btn btn-secondary reject-item-btn" data-id="${item.id}">Reject</button>
+        </div>
+      </div>
+    `).join('');
+
+    reviewList.querySelectorAll('.approve-item-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const targetItem = items.find(item => item.id === id);
+        if (targetItem) {
+          targetItem.reviewStatus = 'approved';
+          targetItem.status = 'active';
+          saveState();
+          renderPaReviewList();
+          renderFoundItems(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
+          updateStats();
+          addPingLog('system', `PA approved item: ${targetItem.name}.`);
+        }
+      });
+    });
+
+    reviewList.querySelectorAll('.reject-item-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        items = items.filter(item => item.id !== id);
+        saveState();
+        renderPaReviewList();
+        renderFoundItems(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
+        updateStats();
+        addPingLog('system', 'PA rejected a suspicious submission.');
+      });
+    });
   }
 
   // --- Report Found Item Submission ---
@@ -540,6 +628,29 @@ document.addEventListener('DOMContentLoaded', () => {
       const secret = document.getElementById('ipt-item-secret').value.trim();
       const desc = document.getElementById('ipt-item-desc').value.trim();
       const itemImage = pendingImageData || '';
+
+      if (!name || !location || !storage || !reporter || !secret || !desc) {
+        showToast('Please fill in every field before submitting a report.', '', '');
+        return;
+      }
+
+      const duplicate = items.some(item => {
+        const sameName = item.name.toLowerCase() === name.toLowerCase();
+        const sameReporter = item.reporter.toLowerCase() === reporter.toLowerCase();
+        const sameLocation = item.location.toLowerCase() === location.toLowerCase();
+        const recentEnough = Date.now() - new Date(item.date).getTime() < 15 * 60 * 1000;
+        return sameName && sameReporter && sameLocation && recentEnough;
+      });
+
+      if (duplicate) {
+        showToast('Duplicate report detected. Please wait before posting another similar item.', '', '');
+        return;
+      }
+
+      if (!addSpamGuard()) {
+        showToast('Too many submissions. Please wait a moment before reporting again.', '', '');
+        return;
+      }
 
       // Format tags array (ensure # prefix, lowercase)
       const tagsArray = rawTags.split(/\s+/).map(t => {
@@ -561,6 +672,8 @@ document.addEventListener('DOMContentLoaded', () => {
         secret,
         desc,
         image: itemImage,
+        reviewStatus: 'pending',
+        moderationNote: '',
         status: 'active',
         date: new Date().toISOString()
       };
@@ -579,19 +692,25 @@ document.addEventListener('DOMContentLoaded', () => {
       closeModal(reportModal);
 
       // Log report in console
-      addPingLog('system', `New item listing registered: ${newItem.name} by finder ${newItem.reporter}.`);
+      addPingLog('system', `Pending review: ${newItem.name} submitted by ${newItem.reporter}.`);
+      showToast('Report received. It is now waiting for PA review before it appears publicly.', '', '');
+    });
+  }
 
-      // Check Watcher correlations
-      watchers.forEach(w => {
-        const matchTag = w.tag.toLowerCase();
-        if (newItem.tags.includes(matchTag)) {
-          // Trigger match alerts!
-          setTimeout(() => {
-            showToast(w.name, newItem.name, w.tag);
-            addPingLog('match', `Correlation found! Watcher ${w.name} (${w.tag}) matched with newly reported ${newItem.name}!`);
-          }, 600);
-        }
-      });
+  const paAccessForm = document.getElementById('frm-pa-access');
+  if (paAccessForm) {
+    paAccessForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const enteredKey = document.getElementById('ipt-pa-key').value.trim();
+      const reviewPanel = document.getElementById('pa-review-panel');
+      if (enteredKey === paPasscode) {
+        if (reviewPanel) reviewPanel.style.display = 'block';
+        renderPaReviewList();
+        addPingLog('system', 'PA moderation panel unlocked.');
+      } else {
+        if (reviewPanel) reviewPanel.style.display = 'none';
+        showToast('Incorrect PA passcode.', '', '');
+      }
     });
   }
 

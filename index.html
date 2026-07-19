@@ -41,6 +41,9 @@
       </nav>
 
       <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+        <button class="btn btn-secondary" id="btn-open-pa-panel" style="padding: 0.6rem 1.4rem; font-size: 0.85rem;">
+          PA Review
+        </button>
         <button class="btn btn-secondary" id="btn-copy-link" style="padding: 0.6rem 1.4rem; font-size: 0.85rem;">
           Copy Link
         </button>
@@ -283,6 +286,31 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- PA Moderation Modal -->
+  <div class="modal-overlay" id="pa-modal" role="dialog" aria-modal="true" aria-labelledby="pa-modal-title">
+    <div class="modal-content glass-panel" style="max-width: 720px;">
+      <div class="modal-header">
+        <h3 id="pa-modal-title">PA Moderation</h3>
+        <button class="close-modal-btn" id="btn-close-pa" aria-label="Close moderation modal">&times;</button>
+      </div>
+
+      <form id="frm-pa-access" class="modal-form">
+        <div class="form-group">
+          <input type="password" id="ipt-pa-key" class="form-input" placeholder=" " required>
+          <label for="ipt-pa-key" class="form-label">PA Access Passcode</label>
+        </div>
+        <div class="submit-container">
+          <button type="submit" class="btn btn-primary">Unlock Review Queue</button>
+        </div>
+      </form>
+
+      <div id="pa-review-panel" class="pa-panel" style="display: none;">
+        <p class="pa-panel-title">Pending submissions awaiting approval</p>
+        <div id="pa-review-list" class="pa-review-list"></div>
+      </div>
     </div>
   </div>
 

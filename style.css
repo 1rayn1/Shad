@@ -904,6 +904,53 @@ textarea.form-input {
   justify-content: flex-end;
 }
 
+.pa-panel {
+  margin-top: 1.4rem;
+  border-top: 1px solid var(--card-border);
+  padding-top: 1rem;
+}
+
+.pa-panel-title {
+  color: var(--text-main);
+  font-weight: 600;
+  margin-bottom: 0.9rem;
+}
+
+.pa-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.pa-review-item {
+  padding: 1rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+}
+
+.pa-review-item h4 {
+  color: white;
+  margin-bottom: 0.3rem;
+}
+
+.pa-review-item p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 0.65rem;
+}
+
+.pa-review-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.pa-review-actions .btn {
+  padding: 0.55rem 1rem;
+  font-size: 0.8rem;
+}
+
 /* --- Toast Alerts Container --- */
 .toast-container {
   position: fixed;
