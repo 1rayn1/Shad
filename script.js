@@ -290,6 +290,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 5000);
   }
 
+  function notifyWatchersForItem(item) {
+    if (!item || !Array.isArray(item.tags)) return;
+
+    const reportTags = item.tags.map(tag => (tag || '').toLowerCase());
+
+    watchers.forEach(watcher => {
+      const watcherTag = (watcher.tag || '').toLowerCase();
+      const hasMatch = reportTags.some(reportTag => {
+        return reportTag === watcherTag || reportTag.includes(watcherTag) || watcherTag.includes(reportTag);
+      });
+
+      if (hasMatch) {
+        setTimeout(() => {
+          showToast(watcher.name, item.name, watcher.tag);
+          addPingLog('match', `Watcher ${watcher.name} matched with new listing ${item.name}!`);
+        }, 400);
+      }
+    });
+  }
+
   function getCategorySVG(category) {
     switch (category) {
       case 'electronics':
@@ -721,6 +741,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Add to state and save
       items.push(newItem);
       saveState();
+
+      // Notify watchers whose alert tag overlaps with the report tags
+      notifyWatchersForItem(newItem);
 
       // Trigger re-render of galleries & stats
       renderFoundItems(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
