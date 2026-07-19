@@ -904,6 +904,22 @@ textarea.form-input {
   justify-content: flex-end;
 }
 
+.auth-gate {
+  max-width: 520px;
+  margin: 120px auto 40px;
+  padding: 2rem;
+  display: block;
+}
+
+.auth-gate.hidden {
+  display: none;
+}
+
+.auth-gate h3 {
+  color: white;
+  margin-bottom: 1.2rem;
+}
+
 .pa-panel {
   margin-top: 1.4rem;
   border-top: 1px solid var(--card-border);
