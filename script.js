@@ -649,9 +649,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const desc = document.getElementById('ipt-item-desc').value.trim();
       const itemImage = pendingImageData || '';
       const normalizedReporter = reporter.toLowerCase();
+      const emailPattern = /^[a-z0-9._-]+\.[a-z0-9._-]+@western\.shad\.ca$/i;
 
       if (!name || !location || !storage || !reporter || !secret || !desc) {
         showToast('Please fill in every field before submitting a report.', '', '');
+        return;
+      }
+
+      if (!emailPattern.test(reporter)) {
+        showToast('Please use a valid Western Shad email in the form firstname.lastname@western.shad.ca.', '', '');
         return;
       }
 
