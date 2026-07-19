@@ -41,6 +41,9 @@
       </nav>
 
       <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+        <button class="btn btn-secondary" id="btn-copy-link" style="padding: 0.6rem 1.4rem; font-size: 0.85rem;">
+          Copy Link
+        </button>
         <button class="btn btn-primary" id="btn-trigger-report" style="padding: 0.6rem 1.4rem; font-size: 0.85rem;">
           Report Found Item
         </button>
@@ -228,6 +231,14 @@
           <div class="form-group">
             <input type="password" id="ipt-item-secret" class="form-input" placeholder=" " required>
             <label for="ipt-item-secret" class="form-label">Secret Key (To resolve later)</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="upload-label" for="ipt-item-image">Add a photo (optional)</label>
+          <input type="file" id="ipt-item-image" class="form-input file-input" accept="image/*">
+          <div class="image-preview" id="item-image-preview" aria-live="polite">
+            <div class="preview-placeholder">No photo selected yet.</div>
           </div>
         </div>
 

@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let items = [];
   let watchers = [];
   let pings = [];
+  let pendingImageData = '';
 
   const defaultItems = [
     {
@@ -116,35 +117,88 @@ document.addEventListener('DOMContentLoaded', () => {
     { time: '13:58:15', type: 'match', text: 'Ping Correlation: Watcher Alex (#airpods) matches reported AirPods Pro!' }
   ];
 
+  function encodeStateForUrl(state) {
+    try {
+      const json = JSON.stringify(state);
+      const bytes = new TextEncoder().encode(json);
+      let binary = '';
+      bytes.forEach(byte => binary += String.fromCharCode(byte));
+      return btoa(binary);
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function decodeStateFromUrl(encoded) {
+    try {
+      const binary = atob(encoded);
+      const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+      return JSON.parse(new TextDecoder().decode(bytes));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function updateShareLink() {
+    const params = new URLSearchParams(window.location.search);
+    const encodedState = encodeStateForUrl({ items, watchers, pings });
+    if (encodedState) {
+      params.set('state', encodedState);
+    } else {
+      params.delete('state');
+    }
+    const newUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+    history.replaceState({}, '', newUrl);
+  }
+
   // Load and save functions
   function loadState() {
-    const savedItems = localStorage.getItem('shad_lf_items');
-    const savedWatchers = localStorage.getItem('shad_lf_watchers');
-    const savedPings = localStorage.getItem('shad_lf_pings');
+    const params = new URLSearchParams(window.location.search);
+    const encodedState = params.get('state');
 
-    if (savedItems) items = JSON.parse(savedItems);
-    else {
-      items = defaultItems;
-      localStorage.setItem('shad_lf_items', JSON.stringify(items));
+    if (encodedState) {
+      const decoded = decodeStateFromUrl(encodedState);
+      if (decoded) {
+        items = Array.isArray(decoded.items) ? decoded.items : defaultItems;
+        watchers = Array.isArray(decoded.watchers) ? decoded.watchers : defaultWatchers;
+        pings = Array.isArray(decoded.pings) ? decoded.pings : defaultPings;
+      } else {
+        items = defaultItems;
+        watchers = defaultWatchers;
+        pings = defaultPings;
+      }
+    } else {
+      const savedItems = localStorage.getItem('shad_lf_items');
+      const savedWatchers = localStorage.getItem('shad_lf_watchers');
+      const savedPings = localStorage.getItem('shad_lf_pings');
+
+      if (savedItems) items = JSON.parse(savedItems);
+      else {
+        items = defaultItems;
+        localStorage.setItem('shad_lf_items', JSON.stringify(items));
+      }
+
+      if (savedWatchers) watchers = JSON.parse(savedWatchers);
+      else {
+        watchers = defaultWatchers;
+        localStorage.setItem('shad_lf_watchers', JSON.stringify(watchers));
+      }
+
+      if (savedPings) pings = JSON.parse(savedPings);
+      else {
+        pings = defaultPings;
+        localStorage.setItem('shad_lf_pings', JSON.stringify(pings));
+      }
     }
 
-    if (savedWatchers) watchers = JSON.parse(savedWatchers);
-    else {
-      watchers = defaultWatchers;
-      localStorage.setItem('shad_lf_watchers', JSON.stringify(watchers));
-    }
-
-    if (savedPings) pings = JSON.parse(savedPings);
-    else {
-      pings = defaultPings;
-      localStorage.setItem('shad_lf_pings', JSON.stringify(pings));
-    }
+    saveState();
   }
 
   function saveState() {
     localStorage.setItem('shad_lf_items', JSON.stringify(items));
     localStorage.setItem('shad_lf_watchers', JSON.stringify(watchers));
     localStorage.setItem('shad_lf_pings', JSON.stringify(pings));
+    updateShareLink();
   }
 
   // --- Rendering Functions ---
@@ -246,6 +300,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function resetImagePreview() {
+    pendingImageData = '';
+    const imageInput = document.getElementById('ipt-item-image');
+    const previewContainer = document.getElementById('item-image-preview');
+    if (imageInput) imageInput.value = '';
+    if (previewContainer) {
+      previewContainer.innerHTML = '<div class="preview-placeholder">No photo selected yet.</div>';
+    }
+  }
+
+  async function handleImageSelection(file) {
+    if (!file) {
+      pendingImageData = '';
+      return '';
+    }
+
+    const previewContainer = document.getElementById('item-image-preview');
+    if (previewContainer) {
+      previewContainer.innerHTML = '<div class="preview-placeholder">Uploading photo…</div>';
+    }
+
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        pendingImageData = reader.result;
+        if (previewContainer) {
+          previewContainer.innerHTML = `<img src="${reader.result}" alt="Selected preview">`;
+        }
+        resolve(reader.result);
+      };
+      reader.onerror = () => {
+        pendingImageData = '';
+        if (previewContainer) {
+          previewContainer.innerHTML = '<div class="preview-placeholder">Unable to read photo.</div>';
+        }
+        resolve('');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   function renderFoundItems(filterValue = 'all') {
     if (!itemsContainer) return;
     itemsContainer.innerHTML = '';
@@ -291,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
       card.innerHTML = `
         ${statusBadge}
         <div class="project-img">
-          ${getCategorySVG(item.category)}
+          ${item.image ? `<img src="${item.image}" alt="${item.name}">` : getCategorySVG(item.category)}
         </div>
         <div class="project-body">
           <h3>${item.name}</h3>
@@ -384,10 +479,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Modal Logic ---
   const reportModal = document.getElementById('report-modal');
   const resolveModal = document.getElementById('resolve-modal');
+  const itemImageInput = document.getElementById('ipt-item-image');
   
   const triggerReportBtn = document.getElementById('btn-trigger-report');
   const closeReportBtn = document.getElementById('btn-close-report');
   const closeResolveBtn = document.getElementById('btn-close-resolve');
+  const copyLinkBtn = document.getElementById('btn-copy-link');
 
   function openModal(modal) {
     modal.classList.add('active');
@@ -401,8 +498,34 @@ document.addEventListener('DOMContentLoaded', () => {
     triggerReportBtn.addEventListener('click', () => openModal(reportModal));
   }
 
+  if (copyLinkBtn) {
+    copyLinkBtn.addEventListener('click', async () => {
+      const currentLink = window.location.href;
+      try {
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(currentLink);
+        } else {
+          window.prompt('Copy this link:', currentLink);
+        }
+        addPingLog('system', 'Share link updated and copied for anyone with the link.');
+      } catch (error) {
+        addPingLog('system', 'Share link ready to copy from the address bar.');
+      }
+    });
+  }
+
+  if (itemImageInput) {
+    itemImageInput.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      await handleImageSelection(file);
+    });
+  }
+
   if (closeReportBtn && reportModal) {
-    closeReportBtn.addEventListener('click', () => closeModal(reportModal));
+    closeReportBtn.addEventListener('click', () => {
+      closeModal(reportModal);
+      resetImagePreview();
+    });
   }
 
   if (closeResolveBtn && resolveModal) {
@@ -415,7 +538,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Close modals when clicking overlay
   window.addEventListener('click', (e) => {
-    if (e.target === reportModal) closeModal(reportModal);
+    if (e.target === reportModal) {
+      closeModal(reportModal);
+      resetImagePreview();
+    }
     if (e.target === resolveModal) {
       closeModal(resolveModal);
       const errLbl = document.getElementById('lbl-resolve-error');
@@ -451,6 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const reporter = document.getElementById('ipt-item-reporter').value.trim();
       const secret = document.getElementById('ipt-item-secret').value.trim();
       const desc = document.getElementById('ipt-item-desc').value.trim();
+      const itemImage = pendingImageData || '';
 
       // Format tags array (ensure # prefix, lowercase)
       const tagsArray = rawTags.split(/\s+/).map(t => {
@@ -471,6 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reporter,
         secret,
         desc,
+        image: itemImage,
         status: 'active',
         date: new Date().toISOString()
       };
@@ -485,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Reset and close modal
       reportForm.reset();
+      resetImagePreview();
       closeModal(reportModal);
 
       // Log report in console
