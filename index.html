@@ -308,7 +308,15 @@
       </form>
 
       <div id="pa-review-panel" class="pa-panel" style="display: none;">
-        <p class="pa-panel-title">Review submissions and manage suspended reporters</p>
+        <p class="pa-panel-title">PA Control Center</p>
+        <div class="form-group">
+          <input type="text" id="ipt-pa-suspend-name" class="form-input" placeholder=" ">
+          <label for="ipt-pa-suspend-name" class="form-label">Suspend reporter by name</label>
+        </div>
+        <div class="submit-container" style="justify-content: flex-start; margin-bottom: 1rem;">
+          <button type="button" class="btn btn-secondary" id="btn-pa-suspend">Suspend Reporter</button>
+        </div>
+
         <div id="pa-review-list" class="pa-review-list"></div>
         <div id="pa-suspensions-list" class="pa-review-list" style="margin-top: 1rem;"></div>
       </div>

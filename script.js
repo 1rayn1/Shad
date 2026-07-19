@@ -581,17 +581,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const reviewPanel = document.getElementById('pa-review-panel');
     if (!reviewList || !reviewPanel || !suspensionsList) return;
 
-    const pendingItems = items.filter(item => item.reviewStatus === 'pending' || item.reviewStatus === 'spam');
-    reviewList.innerHTML = pendingItems.length === 0
-      ? '<p style="color: var(--text-muted);">No pending submissions.</p>'
-      : pendingItems.map(item => `
+    const allItems = items.filter(item => item.reviewStatus !== 'spam' || item.status === 'inactive');
+    reviewList.innerHTML = allItems.length === 0
+      ? '<p style="color: var(--text-muted);">No submissions to manage.</p>'
+      : allItems.map(item => `
           <div class="pa-review-item">
             <h4>${item.name}</h4>
             <p><strong>Reporter:</strong> ${item.reporter} • <strong>Location:</strong> ${item.location}</p>
             <p>${item.desc}</p>
             <div class="pa-review-actions">
-              <button class="btn btn-primary allow-item-btn" data-id="${item.id}">Allow</button>
-              <button class="btn btn-secondary spam-item-btn" data-id="${item.id}">Spam/Troll</button>
+              <button class="btn btn-primary remove-item-btn" data-id="${item.id}">Remove Post</button>
               <button class="btn btn-secondary suspend-reporter-btn" data-id="${item.id}">Suspend Reporter</button>
             </div>
           </div>
@@ -601,35 +600,15 @@ document.addEventListener('DOMContentLoaded', () => {
       ? '<p style="color: var(--text-muted);">No suspended reporters.</p>'
       : `<div class="pa-review-item"><p><strong>Suspended reporters:</strong> ${suspendedReporters.join(', ')}</p></div>`;
 
-    reviewList.querySelectorAll('.allow-item-btn').forEach(btn => {
+    reviewList.querySelectorAll('.remove-item-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
-        const targetItem = items.find(item => item.id === id);
-        if (targetItem) {
-          targetItem.reviewStatus = 'approved';
-          targetItem.status = 'active';
-          saveState();
-          renderPaReviewList();
-          renderFoundItems(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
-          updateStats();
-          addPingLog('system', `PA allowed item: ${targetItem.name}.`);
-        }
-      });
-    });
-
-    reviewList.querySelectorAll('.spam-item-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        const targetItem = items.find(item => item.id === id);
-        if (targetItem) {
-          targetItem.reviewStatus = 'spam';
-          targetItem.status = 'inactive';
-          saveState();
-          renderPaReviewList();
-          renderFoundItems(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
-          updateStats();
-          addPingLog('system', `PA marked item as spam/troll: ${targetItem.name}.`);
-        }
+        items = items.filter(item => item.id !== id);
+        saveState();
+        renderPaReviewList();
+        renderFoundItems(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
+        updateStats();
+        addPingLog('system', 'PA removed a post from the public board.');
       });
     });
 
@@ -643,8 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
             suspendedReporters.push(reporter);
             saveSuspensions();
           }
-          targetItem.reviewStatus = 'spam';
-          targetItem.status = 'inactive';
+          items = items.filter(item => item.id !== id);
           saveState();
           renderPaReviewList();
           renderFoundItems(document.querySelector('.filter-btn.active').getAttribute('data-filter'));
@@ -754,11 +732,27 @@ document.addEventListener('DOMContentLoaded', () => {
       if (enteredKey === paPasscode) {
         if (reviewPanel) reviewPanel.style.display = 'block';
         renderPaReviewList();
-        addPingLog('system', 'PA moderation panel unlocked.');
+        addPingLog('system', 'PA control center unlocked.');
       } else {
         if (reviewPanel) reviewPanel.style.display = 'none';
         showToast('Incorrect PA passcode.', '', '');
       }
+    });
+  }
+
+  const suspendButton = document.getElementById('btn-pa-suspend');
+  if (suspendButton) {
+    suspendButton.addEventListener('click', () => {
+      const input = document.getElementById('ipt-pa-suspend-name');
+      const name = input ? input.value.trim().toLowerCase() : '';
+      if (!name) return;
+      if (!suspendedReporters.includes(name)) {
+        suspendedReporters.push(name);
+        saveSuspensions();
+      }
+      if (input) input.value = '';
+      renderPaReviewList();
+      addPingLog('system', `PA suspended reporter ${name}.`);
     });
   }
 
