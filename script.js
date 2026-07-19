@@ -117,78 +117,40 @@ document.addEventListener('DOMContentLoaded', () => {
     { time: '13:58:15', type: 'match', text: 'Ping Correlation: Watcher Alex (#airpods) matches reported AirPods Pro!' }
   ];
 
-  function encodeStateForUrl(state) {
-    try {
-      const json = JSON.stringify(state);
-      const bytes = new TextEncoder().encode(json);
-      let binary = '';
-      bytes.forEach(byte => binary += String.fromCharCode(byte));
-      return btoa(binary);
-    } catch (error) {
-      return '';
-    }
-  }
-
-  function decodeStateFromUrl(encoded) {
-    try {
-      const binary = atob(encoded);
-      const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
-      return JSON.parse(new TextDecoder().decode(bytes));
-    } catch (error) {
-      return null;
-    }
+  function buildShareUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('state');
+    return url.toString();
   }
 
   function updateShareLink() {
-    const params = new URLSearchParams(window.location.search);
-    const encodedState = encodeStateForUrl({ items, watchers, pings });
-    if (encodedState) {
-      params.set('state', encodedState);
-    } else {
-      params.delete('state');
-    }
-    const newUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
-    history.replaceState({}, '', newUrl);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('state');
+    history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
   }
 
   // Load and save functions
   function loadState() {
-    const params = new URLSearchParams(window.location.search);
-    const encodedState = params.get('state');
+    const savedItems = localStorage.getItem('shad_lf_items');
+    const savedWatchers = localStorage.getItem('shad_lf_watchers');
+    const savedPings = localStorage.getItem('shad_lf_pings');
 
-    if (encodedState) {
-      const decoded = decodeStateFromUrl(encodedState);
-      if (decoded) {
-        items = Array.isArray(decoded.items) ? decoded.items : defaultItems;
-        watchers = Array.isArray(decoded.watchers) ? decoded.watchers : defaultWatchers;
-        pings = Array.isArray(decoded.pings) ? decoded.pings : defaultPings;
-      } else {
-        items = defaultItems;
-        watchers = defaultWatchers;
-        pings = defaultPings;
-      }
-    } else {
-      const savedItems = localStorage.getItem('shad_lf_items');
-      const savedWatchers = localStorage.getItem('shad_lf_watchers');
-      const savedPings = localStorage.getItem('shad_lf_pings');
+    if (savedItems) items = JSON.parse(savedItems);
+    else {
+      items = defaultItems;
+      localStorage.setItem('shad_lf_items', JSON.stringify(items));
+    }
 
-      if (savedItems) items = JSON.parse(savedItems);
-      else {
-        items = defaultItems;
-        localStorage.setItem('shad_lf_items', JSON.stringify(items));
-      }
+    if (savedWatchers) watchers = JSON.parse(savedWatchers);
+    else {
+      watchers = defaultWatchers;
+      localStorage.setItem('shad_lf_watchers', JSON.stringify(watchers));
+    }
 
-      if (savedWatchers) watchers = JSON.parse(savedWatchers);
-      else {
-        watchers = defaultWatchers;
-        localStorage.setItem('shad_lf_watchers', JSON.stringify(watchers));
-      }
-
-      if (savedPings) pings = JSON.parse(savedPings);
-      else {
-        pings = defaultPings;
-        localStorage.setItem('shad_lf_pings', JSON.stringify(pings));
-      }
+    if (savedPings) pings = JSON.parse(savedPings);
+    else {
+      pings = defaultPings;
+      localStorage.setItem('shad_lf_pings', JSON.stringify(pings));
     }
 
     saveState();
@@ -500,14 +462,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (copyLinkBtn) {
     copyLinkBtn.addEventListener('click', async () => {
-      const currentLink = window.location.href;
+      const currentLink = buildShareUrl();
       try {
         if (navigator.clipboard) {
           await navigator.clipboard.writeText(currentLink);
         } else {
           window.prompt('Copy this link:', currentLink);
         }
-        addPingLog('system', 'Share link updated and copied for anyone with the link.');
+        addPingLog('system', 'Short share link copied. It no longer includes the full registry payload.');
       } catch (error) {
         addPingLog('system', 'Share link ready to copy from the address bar.');
       }
