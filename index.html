@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shad Lost &amp; Found Portal | Secure Campus Registry</title>
+  <meta name="description"
+    content="Report, search, and securely claim lost belongings at the Shad summer program. Register tag-based alerts to get pinged automatically when items matching your tags are found.">
+
+  <!-- SEO & Social Open Graph -->
+  <meta property="og:title" content="Shad Lost &amp; Found Portal | Secure Campus Registry">
+  <meta property="og:description"
+    content="Find and report lost items at the Shad program. Set up alert hashtags like #airpods to receive instant matching notifications.">
+  <meta property="og:type" content="website">
+
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Background Ambient Glow & Grid -->
+  <div class="ambient-bg" id="ambient-grid"></div>
+  <div class="glow-orb orb-1" id="orb-top-right"></div>
+  <div class="glow-orb orb-2" id="orb-bottom-left"></div>
+
+  <!-- Header Navigation -->
+  <header id="main-header">
+    <div class="container nav-container">
+      <a href="#hero" class="logo" id="nav-logo">
+        &lt;SHAD<span>.L&amp;F</span>/&gt;
+      </a>
+
+      <nav aria-label="Main Navigation">
+        <ul class="nav-links" id="menu-links">
+          <li><a href="#hero" class="nav-link-item active" id="lnk-hero">Dashboard</a></li>
+          <li><a href="#watcher-section" class="nav-link-item" id="lnk-watchers">Lost Alerts</a></li>
+          <li><a href="#found-items" class="nav-link-item" id="lnk-items">Found Items</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+        <button class="btn btn-primary" id="btn-trigger-report" style="padding: 0.6rem 1.4rem; font-size: 0.85rem;">
+          Report Found Item
+        </button>
+      </div>
+
+      <button class="mobile-toggle" id="btn-mobile-toggle" aria-label="Toggle Navigation Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero / Dashboard Section -->
+    <section id="hero" class="section">
+      <div class="container hero-grid">
+        <div class="hero-text">
+          <h4 id="hero-status">SHAD CAMPUS ACTIVE REGISTRY</h4>
+          <h1 id="hero-title">Shad Lost &amp; Found</h1>
+          <p id="hero-description">
+            Did you drop your wireless earbuds, keys, or hoodie? Set up an alert tag (e.g. <code>#airpods</code>) below.
+            When someone registers a found item with a matching tag, you'll get pinged instantly. Only the original
+            finder can approve the claim via their secure secret key.
+          </p>
+
+          <!-- Stats Panel -->
+          <div class="stats-grid" id="stats-dashboard">
+            <div class="stat-card glass-panel" id="stat-active">
+              <h3 id="cnt-active">0</h3>
+              <p>Active Found Items</p>
+            </div>
+            <div class="stat-card glass-panel" id="stat-resolved">
+              <h3 id="cnt-resolved">0</h3>
+              <p>Items Claimed</p>
+            </div>
+            <div class="stat-card glass-panel" id="stat-watchers">
+              <h3 id="cnt-watchers">0</h3>
+              <p>Active Watchers</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Ping Notifications Monitor -->
+        <div class="hero-visual">
+          <div class="terminal-box glass-panel" id="ping-terminal">
+            <div class="terminal-header">
+              <div class="terminal-dots">
+                <span class="dot-1"></span>
+                <span class="dot-2"></span>
+                <span class="dot-3"></span>
+              </div>
+              <div class="terminal-title">system - live_matching_logs</div>
+              <div style="width: 30px;"></div>
+            </div>
+            <div class="terminal-body" id="ping-logs">
+              <!-- Logs get appended here dynamically -->
+              <div class="terminal-line"><span class="blue">[SYSTEM]</span> Monitor initialized. Listening for tag
+                correlations...</div>
+              <div class="terminal-line success">&gt; Loaded database records: SUCCESS</div>
+              <div class="terminal-line" id="ping-placeholder-line">No matches detected in this session yet. Register an
+                alert tag or report a found item above.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Watcher Register Bar -->
+    <section id="watcher-section" class="section" style="padding-top: 20px; padding-bottom: 60px;">
+      <div class="container">
+        <div class="glass-panel alert-bar-panel" style="padding: 2rem;">
+          <h2 style="font-size: 1.6rem; color: white; margin-bottom: 0.5rem; text-align: left;">Register a Lost Item
+            Alert</h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+            If someone posts a found item with matching tag markers, you'll be highlighted on-screen instantly.
+          </p>
+
+          <form id="frm-register-watcher" class="watcher-inline-form">
+            <div class="form-inputs-row">
+              <div class="form-group inline-group">
+                <input type="text" id="ipt-watcher-name" class="form-input" placeholder=" " required>
+                <label for="ipt-watcher-name" class="form-label">Your Name</label>
+              </div>
+              <div class="form-group inline-group">
+                <input type="text" id="ipt-watcher-contact" class="form-input" placeholder=" " required>
+                <label for="ipt-watcher-contact" class="form-label">Contact / Room Number</label>
+              </div>
+              <div class="form-group inline-group">
+                <input type="text" id="ipt-watcher-tag" class="form-input" placeholder=" " required>
+                <label for="ipt-watcher-tag" class="form-label">Tag Marker (e.g. #airpods)</label>
+              </div>
+              <button type="submit" class="btn btn-primary" id="btn-add-watcher"
+                style="height: 52px; white-space: nowrap;">
+                Set Alert Hook
+              </button>
+            </div>
+          </form>
+
+          <!-- Current Active Watchers List -->
+          <div class="watchers-list-wrapper" style="margin-top: 2rem;">
+            <h4
+              style="color: var(--text-main); font-size: 0.9rem; margin-bottom: 0.8rem; text-transform: uppercase; font-family: var(--font-mono); letter-spacing: 0.05em;">
+              Current Watchers (Listening)
+            </h4>
+            <div class="watcher-tags-container" id="watcher-tags-list">
+              <!-- Dynamically populated tags -->
+              <span class="no-watchers-msg" style="font-size: 0.9rem; color: var(--text-dark);">No active watchers
+                currently listening.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Found Items Gallery Section -->
+    <section id="found-items" class="section">
+      <div class="container">
+        <h2 class="section-title" id="gallery-title">Found Campus Items</h2>
+
+        <div class="projects-filter" id="item-filters">
+          <button class="filter-btn active" data-filter="all" id="btn-filter-all">All Listings</button>
+          <button class="filter-btn" data-filter="electronics" id="btn-filter-elec">Electronics</button>
+          <button class="filter-btn" data-filter="clothing" id="btn-filter-cloth">Clothing</button>
+          <button class="filter-btn" data-filter="accessories" id="btn-filter-acc">Accessories</button>
+          <button class="filter-btn" data-filter="other" id="btn-filter-other">Other</button>
+        </div>
+
+        <div class="projects-grid" id="items-grid-container">
+          <!-- Item Cards go here dynamically -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Report Found Item Modal Overlay -->
+  <div class="modal-overlay" id="report-modal" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
+    <div class="modal-content glass-panel">
+      <div class="modal-header">
+        <h3 id="report-modal-title">Report a Found Item</h3>
+        <button class="close-modal-btn" id="btn-close-report" aria-label="Close modal">&times;</button>
+      </div>
+      <form id="frm-report-found" class="modal-form">
+        <div class="form-group">
+          <input type="text" id="ipt-item-name" class="form-input" placeholder=" " required>
+          <label for="ipt-item-name" class="form-label">Item Title (e.g. Blue Hydration Bottle)</label>
+        </div>
+
+        <div class="form-grid-row">
+          <div class="form-group">
+            <select id="sel-item-category" class="form-input" required style="background: #0d0d16; color: white;">
+              <option value="electronics">Electronics</option>
+              <option value="clothing">Clothing</option>
+              <option value="accessories">Accessories</option>
+              <option value="other">Other</option>
+            </select>
+            <label for="sel-item-category" class="form-label"
+              style="top: -0.6rem; left: 0.8rem; font-size: 0.75rem; color: var(--color-primary); background: #0d0d16; padding: 0 0.4rem;">Category</label>
+          </div>
+
+          <div class="form-group">
+            <input type="text" id="ipt-item-tags" class="form-input" placeholder=" " required>
+            <label for="ipt-item-tags" class="form-label">Tags (space-separated, e.g. #waterbottle #blue)</label>
+          </div>
+        </div>
+
+        <div class="form-grid-row">
+          <div class="form-group">
+            <input type="text" id="ipt-item-location" class="form-input" placeholder=" " required>
+            <label for="ipt-item-location" class="form-label">Where Was It Found?</label>
+          </div>
+
+          <div class="form-group">
+            <input type="text" id="ipt-item-storage" class="form-input" placeholder=" " required>
+            <label for="ipt-item-storage" class="form-label">Where Is It Stored / Collect Point?</label>
+          </div>
+        </div>
+
+        <div class="form-grid-row">
+          <div class="form-group">
+            <input type="text" id="ipt-item-reporter" class="form-input" placeholder=" " required>
+            <label for="ipt-item-reporter" class="form-label">Reporter Name</label>
+          </div>
+
+          <div class="form-group">
+            <input type="password" id="ipt-item-secret" class="form-input" placeholder=" " required>
+            <label for="ipt-item-secret" class="form-label">Secret Key (To resolve later)</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <textarea id="ipt-item-desc" class="form-input" placeholder=" " required></textarea>
+          <label for="ipt-item-desc" class="form-label">Detailed Appearance / Markings Description</label>
+        </div>
+
+        <div class="submit-container">
+          <button type="submit" class="btn btn-primary" id="btn-submit-item">Submit Listing</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Resolve / Claim Item Modal Overlay -->
+  <div class="modal-overlay" id="resolve-modal" role="dialog" aria-modal="true" aria-labelledby="resolve-modal-title">
+    <div class="modal-content glass-panel" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 id="resolve-modal-title">Resolve Listing</h3>
+        <button class="close-modal-btn" id="btn-close-resolve" aria-label="Close modal">&times;</button>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+        To mark <strong id="lbl-resolve-item-name" style="color: white;">[Item Name]</strong> as claimed, please input
+        the secret key assigned by the original reporter.
+      </p>
+      <form id="frm-resolve-claim" class="modal-form">
+        <input type="hidden" id="ipt-resolve-item-id">
+
+        <div class="form-group">
+          <input type="password" id="ipt-resolve-key" class="form-input" placeholder=" " required>
+          <label for="ipt-resolve-key" class="form-label">Resolution Secret Key</label>
+        </div>
+
+        <div class="submit-container" style="display: flex; gap: 1rem; justify-content: flex-end;">
+          <span class="resolve-error-msg" id="lbl-resolve-error"
+            style="color: #ef4444; font-size: 0.85rem; display: none; align-self: center; margin-right: auto;">Incorrect
+            secret key.</span>
+          <button type="submit" class="btn btn-primary" id="btn-confirm-resolve"
+            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);">
+            Mark Claimed &amp; Archive
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Overlay Container -->
+  <div class="toast-container" id="toast-alerts-center" aria-live="polite">
+    <!-- Pings toast notifications slide in here -->
+  </div>
+
+  <footer>
+    <div class="container">
+      <p id="footer-text">&copy; 2026 Shad Lost &amp; Found Registry. Powered securely by Antigravity MCP. All rights
+        reserved.</p>
+    </div>
+  </footer>
+
+  <!-- JS Logic -->
+  <script src="script.js"></script>
+</body>
+
+</html>
