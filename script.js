@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const anyAuthGate = document.getElementById('auth-gate');
+  if (anyAuthGate) {
+    anyAuthGate.remove();
+  }
+
   // --- Header Scroll Effect ---
   const header = document.getElementById('main-header');
   window.addEventListener('scroll', () => {
@@ -344,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
     itemsContainer.innerHTML = '';
 
     const filtered = items.filter(item => {
-      if (item.reviewStatus === 'pending' || item.reviewStatus === 'spam') return false;
+      if (item.reviewStatus === 'spam') return false;
       return filterValue === 'all' || item.category === filterValue;
     });
 
@@ -707,7 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
         secret,
         desc,
         image: itemImage,
-        reviewStatus: 'pending',
+        reviewStatus: 'approved',
         moderationNote: '',
         status: 'active',
         date: new Date().toISOString()
