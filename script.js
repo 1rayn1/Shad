@@ -479,7 +479,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const reportModal = document.getElementById('report-modal');
   const resolveModal = document.getElementById('resolve-modal');
   const paModal = document.getElementById('pa-modal');
-  const authGate = document.getElementById('auth-gate');
   const itemImageInput = document.getElementById('ipt-item-image');
   
   const triggerReportBtn = document.getElementById('btn-trigger-report');
@@ -499,10 +498,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (triggerReportBtn && reportModal) {
     triggerReportBtn.addEventListener('click', () => {
-      if (!currentUserEmail) {
-        showToast('Please sign in first.', '', '');
-        return;
-      }
       openModal(reportModal);
     });
   }
@@ -734,32 +729,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Log report in console
       addPingLog('system', `Pending review: ${newItem.name} submitted by ${newItem.reporter}.`);
       showToast('Report received. It is now waiting for PA review and may be removed if flagged as spam or troll activity.', '', '');
-    });
-  }
-
-  const authForm = document.getElementById('frm-auth');
-  if (authForm) {
-    authForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const email = document.getElementById('ipt-auth-email').value.trim().toLowerCase();
-      const password = document.getElementById('ipt-auth-password').value;
-      const emailPattern = /^[a-z0-9._-]+\.[a-z0-9._-]+@western\.shad\.ca$/i;
-      const simpleEmailCheck = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-      if (!emailPattern.test(email) || !simpleEmailCheck.test(email)) {
-        showToast('Please use a valid Western Shad email in the form firstname.lastname@western.shad.ca.', '', '');
-        return;
-      }
-
-      if (!password || password.length < 6) {
-        showToast('Please enter a valid email password with at least 6 characters.', '', '');
-        return;
-      }
-
-      currentUserEmail = email;
-      if (authGate) authGate.classList.add('hidden');
-      showToast(`Signed in as ${email}`, '', '');
-      addPingLog('system', `User signed in: ${email}`);
     });
   }
 
