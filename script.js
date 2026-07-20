@@ -261,6 +261,19 @@ document.addEventListener('DOMContentLoaded', () => {
     pingLogsContainer.scrollTop = pingLogsContainer.scrollHeight;
   }
 
+  function normalizeTag(rawTag) {
+    const tag = (rawTag || '').trim().toLowerCase();
+    if (!tag) return '';
+    return tag.startsWith('#') ? tag : `#${tag}`;
+  }
+
+  function tagsMatch(a, b) {
+    const left = normalizeTag(a);
+    const right = normalizeTag(b);
+    if (!left || !right) return false;
+    return left === right || left.includes(right) || right.includes(left);
+  }
+
   function showToast(watcherName, itemName, tag) {
     const toastCenter = document.getElementById('toast-alerts-center');
     if (!toastCenter) return;
@@ -293,13 +306,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function notifyWatchersForItem(item) {
     if (!item || !Array.isArray(item.tags)) return;
 
-    const reportTags = item.tags.map(tag => (tag || '').toLowerCase());
+    const reportTags = item.tags.map(normalizeTag).filter(Boolean);
 
     watchers.forEach(watcher => {
-      const watcherTag = (watcher.tag || '').toLowerCase();
-      const hasMatch = reportTags.some(reportTag => {
-        return reportTag === watcherTag || reportTag.includes(watcherTag) || watcherTag.includes(reportTag);
-      });
+      const watcherTag = normalizeTag(watcher.tag);
+      const hasMatch = reportTags.some(reportTag => tagsMatch(reportTag, watcherTag));
 
       if (hasMatch) {
         setTimeout(() => {
@@ -801,11 +812,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const name = document.getElementById('ipt-watcher-name').value.trim();
       const contact = document.getElementById('ipt-watcher-contact').value.trim();
-      let tag = document.getElementById('ipt-watcher-tag').value.trim().toLowerCase();
-
-      if (!tag.startsWith('#')) {
-        tag = '#' + tag;
-      }
+      const tag = normalizeTag(document.getElementById('ipt-watcher-tag').value.trim());
 
       const newWatcher = {
         id: 'watch_' + Date.now(),
@@ -825,11 +832,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Check current active items for matches immediately
       items.forEach(item => {
-        if (item.status === 'active' && item.tags.includes(tag)) {
-          setTimeout(() => {
-            showToast(newWatcher.name, item.name, newWatcher.tag);
-            addPingLog('match', `Instant match: Watcher ${newWatcher.name} matched with active listing ${item.name}!`);
-          }, 400);
+        if (item.status === 'active' && Array.isArray(item.tags)) {
+          const hasMatch = item.tags.some(itemTag => tagsMatch(itemTag, tag));
+          if (hasMatch) {
+            setTimeout(() => {
+              showToast(newWatcher.name, item.name, newWatcher.tag);
+              addPingLog('match', `Instant match: Watcher ${newWatcher.name} matched with active listing ${item.name}!`);
+            }, 400);
+          }
         }
       });
     });
